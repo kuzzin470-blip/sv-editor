@@ -4,8 +4,6 @@
 # скрипт
 
 ```lua
-local UI_PASSWORD = "TPSC9"
-
 local BG_COLOR = Color3.fromRGB(43, 43, 43)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local ACCENT_COLOR = Color3.fromRGB(0, 200, 255)
