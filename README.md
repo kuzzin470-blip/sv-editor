@@ -1,8 +1,9 @@
 # прочитай
-просто файл, не троян    !!я так и не разобрался как в гитхабе весь скрипт сделать копируемым, так что если хочешь копировать то пж скачай зип!!
-
+просто файл, не троян !! я так и не разобрался как в гитхабе весь скрипт сделать копируемым, так что если хочешь — вот вам весь скрипт
 
 # скрипт
+
+```lua
 local UI_PASSWORD = "TPSC9"
 
 local BG_COLOR = Color3.fromRGB(43, 43, 43)
@@ -615,3 +616,4 @@ local function toggleGuiAction(actionName, inputState, inputObject)
 end
 
 ContextActionService:BindAction("TPSC_ToggleGui", toggleGuiAction, false, Enum.KeyCode.M, Enum.KeyCode.LeftControl)
+```
