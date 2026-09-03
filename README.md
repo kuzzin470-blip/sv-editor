@@ -20,8 +20,6 @@ local LINE_COLOR = Color3.fromRGB(255, 100, 100)  -- цвет линии до ц
 local BOX_STROKE_THICKNESS = 2
 local LINE_THICKNESS = 3
 
-local MAX_TRACKED = 20 -- лимит отслеживаемых целей на клиенте по производительности
-
 -- Сервисы
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -558,14 +556,6 @@ local function startRenderLoop()
     if renderBound then return end
     renderBound = true
     RunService:BindToRenderStep("TPSC_AdminESP_Update", Enum.RenderPriority.Camera.Value + 1, function()
-        local count = 0
-        for uid,_ in pairs(tracked) do
-            count = count + 1
-            if count > MAX_TRACKED then
-                removeESPForUserId(uid)
-            end
-        end
-
         for uid, t in pairs(tracked) do
             local ok = true
             if not t.targetPlayer or not t.targetPlayer.Parent then
