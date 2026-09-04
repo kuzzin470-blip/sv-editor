@@ -25,7 +25,7 @@ local AdminEvent = ReplicatedStorage:WaitForChild("AdminEvent")
 local AdminRequest = ReplicatedStorage:WaitForChild("AdminRequest")
 
 -- Конфигурация системы
-local UI_PASSWORD = "admin123"
+local UI_PASSWORD = "TPSC-security223"
 local MAX_DISTANCE_CHECK = 1000
 local RENDER_UPDATE_RATE = 60
 
