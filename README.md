@@ -24,6 +24,11 @@ local PlayerGui = localPlayer:WaitForChild("PlayerGui")
 local AdminEvent = ReplicatedStorage:WaitForChild("AdminEvent")
 local AdminRequest = ReplicatedStorage:WaitForChild("AdminRequest")
 
+-- Конфигурация системы
+local UI_PASSWORD = "admin123"
+local MAX_DISTANCE_CHECK = 1000
+local RENDER_UPDATE_RATE = 60
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TPSC_Admin_UI"
 screenGui.ResetOnSpawn = false
@@ -368,8 +373,6 @@ local function createESPForPlayer(targetPlayer)
     box.BorderSizePixel = 0
     box.Parent = container
     local stroke = Instance.new("UIStroke")
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.LineJoinMode = Enum.LineJoinMode.Round
     stroke.Thickness = BOX_STROKE_THICKNESS
     stroke.Color = ACCENT_COLOR
     stroke.Parent = box
@@ -459,22 +462,24 @@ local function updateOneESP(t)
         t.box.Visible = false
     else
         t.box.Visible = true
-        local minX = math.min(table.unpack(screenXs))
-        local maxX = math.max(table.unpack(screenXs))
-        local minY = math.min(table.unpack(screenYs))
-        local maxY = math.max(table.unpack(screenYs))
+        if #screenXs > 0 then
+            local minX = math.min(table.unpack(screenXs))
+            local maxX = math.max(table.unpack(screenXs))
+            local minY = math.min(table.unpack(screenYs))
+            local maxY = math.max(table.unpack(screenYs))
 
-        local vp = Camera.ViewportSize
-        minX = math.clamp(minX, 0, vp.X)
-        maxX = math.clamp(maxX, 0, vp.X)
-        minY = math.clamp(minY, 0, vp.Y)
-        maxY = math.clamp(maxY, 0, vp.Y)
+            local vp = Camera.ViewportSize
+            minX = math.clamp(minX, 0, vp.X)
+            maxX = math.clamp(maxX, 0, vp.X)
+            minY = math.clamp(minY, 0, vp.Y)
+            maxY = math.clamp(maxY, 0, vp.Y)
 
-        local pos = UDim2.new(0, minX, 0, minY)
-        local size = UDim2.new(0, math.max(1, maxX - minX), 0, math.max(1, maxY - minY))
+            local pos = UDim2.new(0, minX, 0, minY)
+            local size = UDim2.new(0, math.max(1, maxX - minX), 0, math.max(1, maxY - minY))
 
-        t.box.Position = pos
-        t.box.Size = size
+            t.box.Position = pos
+            t.box.Size = size
+        end
     end
 
     local headScreen, _ = worldPointToScreenVec3(refPart.Position)
@@ -525,7 +530,7 @@ end
 local function startRenderLoop()
     if renderBound then return end
     renderBound = true
-    RunService:BindToRenderStep("TPSC_AdminESP_Update", Enum.RenderPriority.Camera.Value + 1, function()
+    RunService:BindToRenderStep("TPSC_AdminESP_Update", Enum.RenderPriority.Camera.Value - 1, function()
         for uid, t in pairs(tracked) do
             local ok = true
             if not t.targetPlayer or not t.targetPlayer.Parent then
@@ -615,3 +620,4 @@ end
 
 ContextActionService:BindAction("TPSC_ToggleGui", toggleGuiAction, false, Enum.KeyCode.M, Enum.KeyCode.LeftControl)
 ```
+
