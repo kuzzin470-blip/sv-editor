@@ -13,6 +13,10 @@
 # скрипт
 
 ```lua
+-- Небольшие правки, чтобы модалка не превращалась в полоску и ESP обновлялся корректно.
+-- Добавлен toggle "ESP для всех" — при включении создаёт ESP для каждого игрока на сервере.
+-- Важно: этот код должен быть LocalScript, работающим на клиенте (PlayerGui / StarterPlayerScripts / StarterGui).
+
 local BG_COLOR = Color3.fromRGB(43, 43, 43)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local ACCENT_COLOR = Color3.fromRGB(0, 200, 255)
@@ -37,6 +41,7 @@ local RENDER_UPDATE_RATE = 60
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TPSC_Admin_UI"
 screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 100 -- гарантируем рендер поверх
 screenGui.Parent = PlayerGui
 
 local header = Instance.new("Frame")
@@ -45,6 +50,7 @@ header.Size = UDim2.new(1, 0, 0, 48)
 header.Position = UDim2.new(0, 0, 0, 0)
 header.BackgroundColor3 = BG_COLOR
 header.BorderSizePixel = 0
+header.ZIndex = 10
 header.Parent = screenGui
 
 local headerCorner = Instance.new("UICorner")
@@ -61,6 +67,7 @@ headerLabel.TextColor3 = TEXT_COLOR
 headerLabel.Font = Enum.Font.SourceSansBold
 headerLabel.TextSize = 20
 headerLabel.TextXAlignment = Enum.TextXAlignment.Left
+headerLabel.ZIndex = 11
 headerLabel.Parent = header
 
 local topCurtain = Instance.new("Frame")
@@ -69,6 +76,7 @@ topCurtain.Size = UDim2.new(1, 0, 0, 120)
 topCurtain.Position = UDim2.new(0, 0, -1, 0)
 topCurtain.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 topCurtain.BorderSizePixel = 0
+topCurtain.ZIndex = 20
 topCurtain.Parent = screenGui
 
 local topCurtainCorner = Instance.new("UICorner", topCurtain)
@@ -84,6 +92,7 @@ local function createPasswordModal()
     modal.AnchorPoint = Vector2.new(0.5, 0.5)
     modal.BackgroundColor3 = BG_COLOR
     modal.BorderSizePixel = 0
+    modal.ZIndex = 200
     modal.Parent = screenGui
 
     local uic = Instance.new("UICorner")
@@ -99,6 +108,7 @@ local function createPasswordModal()
     title.TextColor3 = TEXT_COLOR
     title.Font = Enum.Font.SourceSansBold
     title.TextSize = 18
+    title.ZIndex = 201
     title.Parent = modal
 
     local box = Instance.new("TextBox")
@@ -111,6 +121,7 @@ local function createPasswordModal()
     box.TextColor3 = TEXT_COLOR
     box.BackgroundColor3 = Color3.fromRGB(25,25,25)
     box.BorderSizePixel = 0
+    box.ZIndex = 202
     box.Parent = modal
     local boxCorner = Instance.new("UICorner", box)
     boxCorner.CornerRadius = UDim.new(0, 6)
@@ -123,6 +134,7 @@ local function createPasswordModal()
     ok.Text = "Подтвердить"
     ok.TextColor3 = TEXT_COLOR
     ok.BackgroundColor3 = ACCENT_COLOR
+    ok.ZIndex = 203
     ok.Parent = modal
     local okCorner = Instance.new("UICorner", ok)
     okCorner.CornerRadius = UDim.new(0, 6)
@@ -134,6 +146,7 @@ local function createPasswordModal()
     cancel.Text = "Отмена"
     cancel.TextColor3 = TEXT_COLOR
     cancel.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    cancel.ZIndex = 203
     cancel.Parent = modal
     local cancelCorner = Instance.new("UICorner", cancel)
     cancelCorner.CornerRadius = UDim.new(0, 6)
@@ -148,6 +161,7 @@ local function createPasswordModal()
     info.Font = Enum.Font.SourceSans
     info.TextSize = 14
     info.TextXAlignment = Enum.TextXAlignment.Left
+    info.ZIndex = 201
     info.Parent = modal
 
     passwordModal = modal
@@ -175,6 +189,7 @@ local mainBar
 local playersScrollingFrame
 local selectedUserId = nil
 local playerButtonRefs = {}
+local espAllEnabled = false -- флаг для ESP для всех
 
 local function createMainBar()
     local bar = Instance.new("Frame")
@@ -184,6 +199,7 @@ local function createMainBar()
     bar.BackgroundColor3 = BG_COLOR
     bar.BorderSizePixel = 0
     bar.AnchorPoint = Vector2.new(0,0)
+    bar.ZIndex = 50
     bar.Parent = screenGui
 
     local barCorner = Instance.new("UICorner", bar)
@@ -196,6 +212,7 @@ local function createMainBar()
     scroll.BackgroundTransparency = 1
     scroll.ScrollBarThickness = 6
     scroll.BorderSizePixel = 0
+    scroll.ZIndex = 51
     scroll.Parent = bar
 
     local listLayout = Instance.new("UIListLayout", scroll)
@@ -215,6 +232,7 @@ local function createMainBar()
     actions.Size = UDim2.new(0.3, -12, 1, -12)
     actions.Position = UDim2.new(0.7, 12, 0, 6)
     actions.BackgroundTransparency = 1
+    actions.ZIndex = 51
     actions.Parent = bar
 
     local actionsLayout = Instance.new("UIListLayout", actions)
@@ -232,6 +250,7 @@ local function createMainBar()
         btn.Font = Enum.Font.SourceSansBold
         btn.TextSize = 14
         btn.BorderSizePixel = 0
+        btn.ZIndex = 52
         local c = Instance.new("UICorner", btn)
         c.CornerRadius = UDim.new(0, 6)
         return btn
@@ -242,6 +261,9 @@ local function createMainBar()
 
     local espBtn = makeButton("Toggle ESP", Color3.fromRGB(80,80,80), 120)
     espBtn.Parent = actions
+
+    local espAllBtn = makeButton("ESP всех: OFF", Color3.fromRGB(100,100,100), 140)
+    espAllBtn.Parent = actions
 
     local destroyBtn = makeButton("Destroy GUI", Color3.fromRGB(180,50,50), 120)
     destroyBtn.Parent = actions
@@ -270,6 +292,29 @@ local function createMainBar()
         end
     end)
 
+    espAllBtn.MouseButton1Click:Connect(function()
+        espAllEnabled = not espAllEnabled
+        if espAllEnabled then
+            espAllBtn.Text = "ESP всех: ON"
+            espAllBtn.BackgroundColor3 = ACCENT_COLOR
+            -- Создать ESP для всех текущих игроков, кроме локального
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= localPlayer then
+                    createESPForPlayer(p)
+                end
+            end
+            startRenderLoop()
+        else
+            espAllBtn.Text = "ESP всех: OFF"
+            espAllBtn.BackgroundColor3 = Color3.fromRGB(100,100,100)
+            -- Удалить все ESP
+            for uid, _ in pairs(tracked) do
+                removeESPForUserId(uid)
+            end
+            stopRenderLoop()
+        end
+    end)
+
     destroyBtn.MouseButton1Click:Connect(function()
         cleanupAndDestroy()
     end)
@@ -287,6 +332,7 @@ local function makePlayerEntry(pl)
     btn.Font = Enum.Font.SourceSans
     btn.TextSize = 14
     btn.Text = pl.Name .. "  [" .. tostring(pl.UserId) .. "]"
+    btn.ZIndex = 52
     btn.Parent = playersScrollingFrame
     local corner = Instance.new("UICorner", btn)
     corner.CornerRadius = UDim.new(0, 8)
@@ -325,6 +371,11 @@ Players.PlayerAdded:Connect(function(pl)
             makePlayerEntry(pl)
         end
     end
+    -- Если ESP для всех включён, создаём ESP для новоприсоединившегося
+    if espAllEnabled and pl ~= localPlayer then
+        createESPForPlayer(pl)
+        startRenderLoop()
+    end
 end)
 
 Players.PlayerRemoving:Connect(function(pl)
@@ -332,14 +383,18 @@ Players.PlayerRemoving:Connect(function(pl)
     if b and b.Parent then b:Destroy() end
     playerButtonRefs[pl.UserId] = nil
     if selectedUserId == pl.UserId then selectedUserId = nil end
+    -- Удаляем ESP за ушедшего игрока
+    removeESPForUserId(pl.UserId)
 end)
 
 local tracked = {}
-local renderBound = false
+local renderConn = nil
 
 local function worldPointToScreenVec3(worldPos)
+    if not Camera then Camera = workspace.CurrentCamera end
+    if not Camera then return Vector3.new(0,0,0), false end
     local vpPoint, onScreen = Camera:WorldToViewportPoint(worldPos)
-    return Vector3.new(vpPoint.X, vpPoint.Y, vpPoint.Z), onScreen
+    return Vector3.new(vpPoint.X or 0, vpPoint.Y or 0, vpPoint.Z or 0), onScreen
 end
 
 local function getCharacterBounds(character)
@@ -386,6 +441,7 @@ local function createESPForPlayer(targetPlayer)
     container.Size = UDim2.new(1, 0, 1, 0)
     container.Position = UDim2.new(0,0,0,0)
     container.BackgroundTransparency = 1
+    container.ZIndex = 50
     container.Parent = screenGui
 
     local box = Instance.new("Frame")
@@ -393,6 +449,7 @@ local function createESPForPlayer(targetPlayer)
     box.BackgroundTransparency = 0.3
     box.BackgroundColor3 = Color3.fromRGB(15,15,15)
     box.BorderSizePixel = 0
+    box.ZIndex = 51
     box.Parent = container
     local stroke = Instance.new("UIStroke")
     stroke.Thickness = BOX_STROKE_THICKNESS
@@ -406,6 +463,7 @@ local function createESPForPlayer(targetPlayer)
     line.AnchorPoint = Vector2.new(0, 0.5)
     line.BackgroundColor3 = LINE_COLOR
     line.BorderSizePixel = 0
+    line.ZIndex = 52
     line.Parent = container
 
     local label = Instance.new("TextLabel")
@@ -417,6 +475,7 @@ local function createESPForPlayer(targetPlayer)
     label.TextSize = 14
     label.Size = UDim2.new(0, 220, 0, 24)
     label.AnchorPoint = Vector2.new(0, 0)
+    label.ZIndex = 53
     label.Parent = container
 
     tracked[uid] = {
@@ -427,6 +486,8 @@ local function createESPForPlayer(targetPlayer)
         label = label,
         targetPlayer = targetPlayer,
     }
+
+    print("created ESP for", uid)
 end
 
 local function removeESPForUserId(uid)
@@ -492,7 +553,7 @@ local function updateOneESP(t)
             local minY = math.min(table.unpack(screenYs))
             local maxY = math.max(table.unpack(screenYs))
 
-            local vp = Camera.ViewportSize
+            local vp = (Camera and Camera.ViewportSize) or Vector2.new(800,600)
             minX = math.clamp(minX, 0, vp.X)
             maxX = math.clamp(maxX, 0, vp.X)
             minY = math.clamp(minY, 0, vp.Y)
@@ -507,12 +568,12 @@ local function updateOneESP(t)
     end
 
     local headScreen, _ = worldPointToScreenVec3(refPart.Position)
-    local vpSize = Camera.ViewportSize
+    local vpSize = (Camera and Camera.ViewportSize) or Vector2.new(800,600)
     local centerScreen = Vector2.new(vpSize.X/2, vpSize.Y/2)
 
-    local _, _, z = Camera:WorldToViewportPoint(refPart.Position)
+    local _, _, z = Camera and Camera:WorldToViewportPoint(refPart.Position)
     local targetScreenPos2d = Vector2.new(headScreen.X, headScreen.Y)
-    if z < 0 then
+    if z and z < 0 then
         targetScreenPos2d = centerScreen + (centerScreen - targetScreenPos2d)
     end
 
@@ -553,9 +614,10 @@ local function updateOneESP(t)
 end
 
 local function startRenderLoop()
-    if renderBound then return end
-    renderBound = true
-    RunService:BindToRenderStep("TPSC_AdminESP_Update", Enum.RenderPriority.Camera.Value - 1, function()
+    if renderConn then return end
+    print("ESP render started")
+    renderConn = RunService.RenderStepped:Connect(function()
+        Camera = workspace.CurrentCamera or Camera
         for uid, t in pairs(tracked) do
             local ok = true
             if not t.targetPlayer or not t.targetPlayer.Parent then
@@ -569,13 +631,14 @@ local function startRenderLoop()
 end
 
 local function stopRenderLoop()
-    if not renderBound then return end
-    renderBound = false
-    pcall(function() RunService:UnbindFromRenderStep("TPSC_AdminESP_Update") end)
+    if renderConn then
+        renderConn:Disconnect()
+        renderConn = nil
+    end
 end
 
 function playCurtainAndShowMain()
-    local screenSize = workspace.CurrentCamera.ViewportSize
+    local screenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800,600)
     topCurtain.Position = UDim2.new(0,0, -1, 0)
     local tweenDown = TweenService:Create(topCurtain, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0,0,0,0)})
     tweenDown:Play()
