@@ -74,10 +74,11 @@ local function createPasswordModal()
     local modal = Instance.new("Frame")
     modal.Name = "PasswordModal"
     modal.Size = UDim2.new(0, 380, 0, 140)
-    modal.Position = UDim2.new(0.5, -190, 0.5, -70)
+    -- центрируем модалку по AnchorPoint, чтобы кнопки всегда внутри
+    modal.Position = UDim2.new(0.5, 0, 0.5, 0)
+    modal.AnchorPoint = Vector2.new(0.5, 0.5)
     modal.BackgroundColor3 = BG_COLOR
     modal.BorderSizePixel = 0
-    modal.AnchorPoint = Vector2.new(0, 0)
     modal.Parent = screenGui
 
     local uic = Instance.new("UICorner")
@@ -112,8 +113,8 @@ local function createPasswordModal()
     local ok = Instance.new("TextButton")
     ok.Name = "OK"
     ok.Size = UDim2.new(0, 120, 0, 32)
-    ok.Position = UDim2.new(1, -130, 1, -10)
-    ok.AnchorPoint = Vector2.new(0, 0)
+    -- позиция: справа внизу модалки с учётом AnchorPoint (0.5,0.5)
+    ok.Position = UDim2.new(0.5, 380/2 - 130, 0.5, 140/2 - 42)
     ok.Text = "Подтвердить"
     ok.TextColor3 = TEXT_COLOR
     ok.BackgroundColor3 = ACCENT_COLOR
@@ -124,7 +125,7 @@ local function createPasswordModal()
     local cancel = Instance.new("TextButton")
     cancel.Name = "Cancel"
     cancel.Size = UDim2.new(0, 80, 0, 32)
-    cancel.Position = UDim2.new(1, -220, 1, -10)
+    cancel.Position = UDim2.new(0.5, 380/2 - 220, 0.5, 140/2 - 42)
     cancel.Text = "Отмена"
     cancel.TextColor3 = TEXT_COLOR
     cancel.BackgroundColor3 = Color3.fromRGB(80,80,80)
@@ -242,8 +243,7 @@ local function createMainBar()
 
     tpBtn.MouseButton1Click:Connect(function()
         if not selectedUserId then return end
-        -- Для Xeno X - прямая телепортация
-        local targetPlayer = Players:FindFirstChild(tostring(selectedUserId))
+        -- Телепортация к игроку по UserId
         for _, player in pairs(Players:GetPlayers()) do
             if player.UserId == selectedUserId and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                 if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -256,8 +256,13 @@ local function createMainBar()
 
     espBtn.MouseButton1Click:Connect(function()
         if not selectedUserId then return end
-        print("ESP Toggle для: " .. selectedUserId)
-        -- ESP логика будет ниже
+        if tracked[selectedUserId] then
+            removeESPForUserId(selectedUserId)
+        else
+            local target = nil
+            for _, p in pairs(Players:GetPlayers()) do if p.UserId == selectedUserId then target = p break end end
+            if target then createESPForPlayer(target) startRenderLoop() end
+        end
     end)
 
     destroyBtn.MouseButton1Click:Connect(function()
@@ -295,6 +300,7 @@ local function makePlayerEntry(pl)
 end
 
 local function refreshPlayerList()
+    if not playersScrollingFrame then return end
     for _, child in ipairs(playersScrollingFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -369,22 +375,26 @@ local function createESPForPlayer(targetPlayer)
     local uid = targetPlayer.UserId
     if tracked[uid] then return end
 
+    -- Контейнер растянут на весь экран, чтобы позиция/размер дочерних элементов задавались в пикселях
     local container = Instance.new("Frame")
     container.Name = "ESP_" .. tostring(uid)
-    container.Size = UDim2.new(0, 0, 0, 0)
+    container.Size = UDim2.new(1, 0, 1, 0)
     container.Position = UDim2.new(0,0,0,0)
     container.BackgroundTransparency = 1
     container.Parent = screenGui
 
     local box = Instance.new("Frame")
     box.Name = "Box"
-    box.BackgroundTransparency = 1
+    box.BackgroundTransparency = 0.3
+    box.BackgroundColor3 = Color3.fromRGB(15,15,15)
     box.BorderSizePixel = 0
     box.Parent = container
     local stroke = Instance.new("UIStroke")
     stroke.Thickness = BOX_STROKE_THICKNESS
     stroke.Color = ACCENT_COLOR
     stroke.Parent = box
+    local boxCorner = Instance.new("UICorner", box)
+    boxCorner.CornerRadius = UDim.new(0, 6)
 
     local line = Instance.new("Frame")
     line.Name = "Line"
@@ -401,7 +411,7 @@ local function createESPForPlayer(targetPlayer)
     label.Font = Enum.Font.SourceSansSemibold
     label.TextSize = 14
     label.Size = UDim2.new(0, 220, 0, 24)
-    label.AnchorPoint = Vector2.new(0.5, 0)
+    label.AnchorPoint = Vector2.new(0, 0)
     label.Parent = container
 
     tracked[uid] = {
@@ -506,6 +516,7 @@ local function updateOneESP(t)
     local angle = math.deg(math.atan2(dir.Y, dir.X))
 
     local line = t.line
+    -- позиция и размер линии в координатах экрана
     line.Position = UDim2.new(0, centerScreen.X, 0, centerScreen.Y)
     line.Size = UDim2.new(0, math.max(1, length), 0, LINE_THICKNESS)
     line.AnchorPoint = Vector2.new(0, 0.5)
@@ -595,3 +606,4 @@ end
 
 ContextActionService:BindAction("TPSC_ToggleGui", toggleGuiAction, false, Enum.KeyCode.M, Enum.KeyCode.LeftControl)
 
+```
