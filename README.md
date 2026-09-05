@@ -17,16 +17,12 @@ local LINE_THICKNESS = 3
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
 local Camera = workspace.CurrentCamera
 
 local localPlayer = Players.LocalPlayer
 local PlayerGui = localPlayer:WaitForChild("PlayerGui")
-
-local AdminEvent = ReplicatedStorage:WaitForChild("AdminEvent")
-local AdminRequest = ReplicatedStorage:WaitForChild("AdminRequest")
 
 -- Конфигурация системы
 local UI_PASSWORD = "TPSC-security223"
@@ -246,16 +242,25 @@ local function createMainBar()
 
     tpBtn.MouseButton1Click:Connect(function()
         if not selectedUserId then return end
-        pcall(function() AdminRequest:FireServer("teleport", selectedUserId) end)
+        -- Для Xeno X - прямая телепортация
+        local targetPlayer = Players:FindFirstChild(tostring(selectedUserId))
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.UserId == selectedUserId and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    localPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                end
+                break
+            end
+        end
     end)
 
     espBtn.MouseButton1Click:Connect(function()
         if not selectedUserId then return end
-        pcall(function() AdminRequest:FireServer("esp_toggle", selectedUserId) end)
+        print("ESP Toggle для: " .. selectedUserId)
+        -- ESP логика будет ниже
     end)
 
     destroyBtn.MouseButton1Click:Connect(function()
-        pcall(function() AdminRequest:FireServer("esp_clear") end)
         cleanupAndDestroy()
     end)
 
@@ -553,39 +558,6 @@ local function stopRenderLoop()
     pcall(function() RunService:UnbindFromRenderStep("TPSC_AdminESP_Update") end)
 end
 
-local adminEventConn
-adminEventConn = AdminEvent.OnClientEvent:Connect(function(action, data)
-    if action ~= "esp_update" then return end
-    if type(data) ~= "table" then return end
-
-    local wanted = {}
-    for _, uid in ipairs(data) do
-        if type(uid) == "number" then wanted[uid] = true end
-    end
-
-    for uid,_ in pairs(tracked) do
-        if not wanted[uid] then removeESPForUserId(uid) end
-    end
-
-    for uid,_ in pairs(wanted) do
-        if not tracked[uid] then
-            local p = Players:GetPlayerByUserId(uid)
-            if p then createESPForPlayer(p)
-            else
-                local conn
-                conn = Players.PlayerAdded:Connect(function(pl)
-                    if pl.UserId == uid then
-                        createESPForPlayer(pl)
-                        conn:Disconnect()
-                    end
-                end)
-            end
-        end
-    end
-
-    if next(tracked) then startRenderLoop() else stopRenderLoop() end
-end)
-
 function playCurtainAndShowMain()
     local screenSize = workspace.CurrentCamera.ViewportSize
     topCurtain.Position = UDim2.new(0,0, -1, 0)
@@ -602,7 +574,6 @@ end
 
 function cleanupAndDestroy()
     stopRenderLoop()
-    if adminEventConn then adminEventConn:Disconnect(); adminEventConn = nil end
     if screenGui and screenGui.Parent then screenGui:Destroy() end
 end
 
@@ -623,5 +594,4 @@ local function toggleGuiAction(actionName, inputState, inputObject)
 end
 
 ContextActionService:BindAction("TPSC_ToggleGui", toggleGuiAction, false, Enum.KeyCode.M, Enum.KeyCode.LeftControl)
-```
 
